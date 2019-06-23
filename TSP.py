@@ -1,7 +1,7 @@
 import numpy as np # array operations
 import random # stochastic route generation
 import operator # for fancy dictionary sort
-from collections import OrderedDict # sorted from dict->dict
+from collections import OrderedDict, deque # sorted from dict->dict; keep track of number of times we try to escape from local minima
 import argparse 
 import sys
 import matplotlib.pyplot as plt # yes
@@ -96,19 +96,18 @@ class TSPProblem:
         mutated = self.mutate(crossed, mut_rate)
         return mutated
 
-    def run(self, n_iters=1000, n_elite=10, mut_rate=0.001, pop_size=100, epsilon=0.0001, report_every=100):
+    def run(self, n_iters=1000, n_elite=10, mut_rate=0.001, pop_size=100, escape_attempts=10, report_every=100):
         pop = self.createPopulation(pop_size)
-        last_max = None 
+        last_max_deque = deque() 
         for i in range(n_iters):
             pop = self.iterate(pop, n_elite, mut_rate)
             if i % report_every == 0:
                 print("=====Result after", i+1, "iteration(s)=====")
                 self.report(pop)
-            if i > 0:
-                if last_max is not None:
-                    if epsilon > (max(self.rankRoutes(pop)) - last_max):
-                        break # convergence
-                last_max = max(self.rankRoutes(pop))
+            if len(last_max_deque) == escape_attempts:
+                if len(set(last_max_deque)) <= 1: break
+                last_max_deque.popleft()
+            last_max_deque.append(list(self.rankRoutes(pop).keys())[0])
         fitness, best_route = self.report(pop)
         self.plot(fitness, best_route)
 
@@ -138,7 +137,7 @@ if __name__ == '__main__':
     psr.add_argument('--num-elite', type=int, default=10, help='number of "elite" genes that are selected for reproduction')
     psr.add_argument('--generation', type=int, default=100, help='generation size')
     psr.add_argument('--mutation-rate', type=float, default=0.001, help='mutation rate; probability of a swap mutation in a single generation')
-    psr.add_argument('--epsilon', type=float, default=0.0001, help='epsilon; convergence parameter')
+    psr.add_argument('--escape_attempts', type=int, default=10, help='epsilon; convergence parameter')
     psr.add_argument('--report', type=int, default=100, help='reporting frequency')
     args = psr.parse_args()
     if type(args.iterations) is not int:
@@ -159,11 +158,10 @@ if __name__ == '__main__':
     if args.mutation_rate < 0 or args.mutation_rate > 1:
         print("ERROR: Mutation rate must be a probability between 0 and 1, inclusive")
         sys.exit(0)
-    if args.epsilon < 0:
-        print("ERROR: Epsilon must be positive")
-        sys.exit(0)
+    if type(args.escape_attempts) is not int:
+        print("ERROR: Number of escape attempts from local minima must be an integer.")
     tsp = TSPProblem(args.file)
-    tsp.run(n_iters=args.iterations, n_elite=args.num_elite, mut_rate=args.mutation_rate, pop_size=args.generation, epsilon=args.epsilon, report_every=args.report)
+    tsp.run(n_iters=args.iterations, n_elite=args.num_elite, mut_rate=args.mutation_rate, pop_size=args.generation, escape_attempts=args.escape_attempts, report_every=args.report)
 
 
 
