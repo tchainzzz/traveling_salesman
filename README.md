@@ -52,7 +52,12 @@ Lastly, the mutation step occurs. We use swap mutation since this problem has th
 route. This means that with some probability p (default 1e-03), two elements in the population are swapped. 
 
 Note that GAs are **not** guaranteed to converge to a global optimum, but in practice, with enough iterations and proper hyperparameter tuning,
-it is likely unless the pseudorandom number generator is feeling particularly malicious.
+it is likely unless the pseudorandom number generator is feeling particularly  malicious.
+
+# Creating cities
+A "map" is a formatted file that represents a list of cities for which we solve a TSP. You can see an example by navigating to 
+'maps/smallcity'. In general, each line follows the format <city-number/name> <x-coordinate> <y-coordinate>. Lines beginning with '#' are 
+ignored. 
 
 # Acknowledgements
 [This article](https://towardsdatascience.com/evolution-of-a-salesman-a-complete-genetic-algorithm-tutorial-for-python-6fe5d2b3ca35) by Eric Stoltz
