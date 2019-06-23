@@ -51,13 +51,24 @@ array, and the rest of the slots are filled in-order by elements of parent 2 tha
 Lastly, the mutation step occurs. We use swap mutation since this problem has the unique property that each city must appear once in a
 route. This means that with some probability p (default 1e-03), two elements in the population are swapped. 
 
-Note that GAs are **not** guaranteed to converge to a global optimum, but in practice, with enough iterations and proper hyperparameter tuning,
-it is likely unless the pseudorandom number generator is feeling particularly  malicious.
+Note that GAs are **not** guaranteed to converge to a global optimum, but in practice, with enough iterations and proper hyperparameter tuning, it is likely unless the pseudorandom number generator is feeling particularly  malicious.
+
+# Running the script
+In general, one will always start with `python3 TSP.py`. The script also accepts the following command line arguments:
+
+* `-h, --help` shows an explanation of all the arguments and exits.
+* `--file` accepts a string representing the filename representing a map, e.g. `maps/smallcity`.
+* `--iterations` is an integer denoting the number of iterations to run before termination if convergence is not reached.
+* `--num-elite` is an integer specifying the number of parents selected for breeding.
+* `--generation` is an integer representing the generation size.
+* `--mutation-rate` is a float between 0 and 1 specifying the probability of a mutation.
+* `--escape-attempts` is the number 
+of iterations without change before the algorithm terminates. Used to allow the GA to escape from local minima.
+* `--report` is an integer representing the frequency of reporting, in which the script prints the fitness of a route and the route itself to stdout.
 
 # Creating cities
 A "map" is a formatted file that represents a list of cities for which we solve a TSP. You can see an example by navigating to 
-'maps/smallcity'. In general, each line follows the format <city-number/name> <x-coordinate> <y-coordinate>. Lines beginning with '#' are 
-ignored. 
+'maps/smallcity'. In general, each line follows the format `<city-number/name> <x-coordinate> <y-coordinate>`. Lines beginning with '#' are ignored. 
 
 # Acknowledgements
 [This article](https://towardsdatascience.com/evolution-of-a-salesman-a-complete-genetic-algorithm-tutorial-for-python-6fe5d2b3ca35) by Eric Stoltz
