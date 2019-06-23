@@ -1,5 +1,7 @@
 import numpy as np # array operations
 import random # stochastic route generation
+import operator # for fancy dictionary sort
+from collections import OrderedDict # sorted from dict->dict
 import argparse 
 import sys
 import matplotlib.pyplot as plt # yes
@@ -38,33 +40,42 @@ class TSPProblem:
         return [self.createRoute() for _ in range(pop_size)]
     
     def rankRoutes(self, population, fitness_func=inv_l2):
-        return [fitness_func(population[i]) for i in range(len(population))]
+        fitness_results = {i: fitness_func(route) for i, route in enumerate(population)}
+        sorted_fitness = OrderedDict(sorted(fitness_results.items(), key=operator.itemgetter(1), reverse=True))
+        return sorted_fitness
 
-    def resample(self, routes, rankings, sample_size):
-        return np.array(routes)[np.random.choice(len(routes), size=sample_size, p=[w / sum(rankings) for w in rankings]), :]
+    def chooseParents(self, routes, fitness_dict, n_elites): 
+        result = []
+        for i in range(n_elites):
+            result.append(np.array(routes[list(fitness_dict.keys())[i]]))
+        result += self.resample([routes[idx] for idx in fitness_dict.keys()], fitness_dict.values(), len(fitness_dict) - n_elites)  
+        return result
+
+
+    def resample(self, routes, rankings, sample_size): 
+        return list(np.array(routes)[np.random.choice(len(routes), size=sample_size, p=[w / sum(rankings) for w in rankings]), :])
 
     def breed(self, parent1, parent2):
-        loc1 = random.choice(range(len(parent1))) 
-        loc2 = random.choice(range(len(parent1)))
-        gene = parent1[loc1 : loc2]
+        loc1, loc2 = random.sample(range(len(parent1)), 2) 
+        gene = parent1[loc1 : loc2]  
         child = [None] * len(parent1) # sentinel value
         for i in range(loc1, loc2, 1):
-            child[i] = gene[i]
-        parent2_iter = -1
+            child[i] = gene[i - loc1]
+        parent2_iter = 0
         for i in range(len(child)):
             if child[i] is None:
-                while True:
+                next_trait = parent2[parent2_iter]
+                while next_trait in gene:
                     parent2_iter += 1 
-                    if parent2[parent2_iter] not in gene:
-                        child[i] = parent2[parent2_iter]
-                        break           
-            else:
+                    next_trait = parent2[parent2_iter]
+                child[i] = parent2[parent2_iter]
                 parent2_iter += 1
+        assert(len(child) == len(set(child)))
         return child
 
     def crossover(self, routes, n_elite):
         next_gen = routes[:n_elite]
-        n_children = len(routes) - n_elite
+        n_children = len(routes) - n_elite 
         for _ in range(n_children):
             parent1, parent2 = random.sample(routes, 2)
             next_gen.append(self.breed(parent1, parent2))
@@ -79,9 +90,9 @@ class TSPProblem:
         return routes
 
     def iterate(self, curr_gen, n_elite=10, mut_rate=0.001):
-        ranked = self.rankRoutes(curr_gen)
-        fittest = self.resample(curr_gen, ranked, n_elite)
-        crossed = self.crossover(fittest, n_elite)
+        ranked = self.rankRoutes(curr_gen) # rank the current generation
+        parents = self.chooseParents(curr_gen, ranked, n_elite)
+        crossed = self.crossover(parents, n_elite)
         mutated = self.mutate(crossed, mut_rate)
         return mutated
 
@@ -103,10 +114,10 @@ class TSPProblem:
 
     def report(self, population, fitness_func=inv_l2):
         rankings = self.rankRoutes(population)
-        best_route = population[rankings.index(max(rankings))]
-        print("Length:", 1 / max(rankings))
+        best_route = population[list(rankings.keys())[0]]
+        print("Length:", 1 / fitness_func(best_route))
         print("Route:", str(list(best_route)))
-        return 1 / max(rankings), list(best_route)
+        return 1 / fitness_func(best_route), list(best_route)
 
     def plot(self, fitness, route):
         x = [city.x for city in route]
