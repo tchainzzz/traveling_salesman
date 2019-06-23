@@ -1,7 +1,7 @@
 import numpy as np # array operations
-import random # stochastic rotue generation
-import operator # for fancy sorting stuff
-import pandas as pd
+import random # stochastic route generation
+import argparse 
+import sys
 import matplotlib.pyplot as plt # yes
 
 class City:
@@ -44,19 +44,22 @@ class TSPProblem:
         return np.array(routes)[np.random.choice(len(routes), size=sample_size, p=[w / sum(rankings) for w in rankings]), :]
 
     def breed(self, parent1, parent2):
-        loc = random.choice(range(len(parent1))) 
-        gene = parent1[loc : random.choice(range(len(parent1)))]
+        loc1 = random.choice(range(len(parent1))) 
+        loc2 = random.choice(range(len(parent1)))
+        gene = parent1[loc1 : loc2]
         child = [None] * len(parent1) # sentinel value
-        for i in range(len(gene)):
-            child[i + loc] = gene[i]
-        parent2_iter = 0
+        for i in range(loc1, loc2, 1):
+            child[i] = gene[i]
+        parent2_iter = -1
         for i in range(len(child)):
             if child[i] is None:
                 while True:
+                    parent2_iter += 1 
                     if parent2[parent2_iter] not in gene:
                         child[i] = parent2[parent2_iter]
-                        break
-                    parent2_iter += 1       
+                        break           
+            else:
+                parent2_iter += 1
         return child
 
     def crossover(self, routes, n_elite):
@@ -82,13 +85,14 @@ class TSPProblem:
         mutated = self.mutate(crossed, mut_rate)
         return mutated
 
-    def run(self, n_iters=1000, n_elite=10, mut_rate=0.001, pop_size=100, epsilon=0.0001):
+    def run(self, n_iters=1000, n_elite=10, mut_rate=0.001, pop_size=100, epsilon=0.0001, report_every=100):
         pop = self.createPopulation(pop_size)
-        last_max = None
+        last_max = None 
         for i in range(n_iters):
-            if n_iters >= 5000 and i % 100 == 0 and i != 0:
-                print("Performing iteration {}/{}".format(i + 1, n_iters))
             pop = self.iterate(pop, n_elite, mut_rate)
+            if i % report_every == 0:
+                print("=====Result after", i+1, "iteration(s)=====")
+                self.report(pop)
             if i > 0:
                 if last_max is not None:
                     if epsilon > (max(self.rankRoutes(pop)) - last_max):
@@ -117,8 +121,38 @@ class TSPProblem:
             
 
 if __name__ == '__main__':
-    tsp = TSPProblem('maps/small_city')
-    tsp.run(n_iters=1000, n_elite=100, mut_rate=0.001, pop_size=5000)
+    psr = argparse.ArgumentParser()
+    psr.add_argument('--file', type=str, default='maps/small_city', help='file with cities and coordinates')
+    psr.add_argument('--iterations', type=int, default=1000, help='number of iterations before termination (if no convergence)')
+    psr.add_argument('--num-elite', type=int, default=10, help='number of "elite" genes that are selected for reproduction')
+    psr.add_argument('--generation', type=int, default=100, help='generation size')
+    psr.add_argument('--mutation-rate', type=float, default=0.001, help='mutation rate; probability of a swap mutation in a single generation')
+    psr.add_argument('--epsilon', type=float, default=0.0001, help='epsilon; convergence parameter')
+    psr.add_argument('--report', type=int, default=100, help='reporting frequency')
+    args = psr.parse_args()
+    if type(args.iterations) is not int:
+        print("ERROR: Number of iterations must be an integer.")
+        sys.exit(0)
+    if type(args.num_elite) is not int:
+        print("ERROR: Number of elite genes must be an integer.")
+        sys.exit(0)
+    if type(args.generation) is not int:
+        print("ERROR: Generation size must be an integer.")
+        sys.exit(0)
+    if args.generation < args.num_elite:
+        print("ERROR: Generation size must be larger than the number of elite genes retained.")
+        sys.exit(0)
+    if type(args.report) is not int:
+        print("ERROR: Reporting frequency must be an integer.")
+        sys.exit(0)
+    if args.mutation_rate < 0 or args.mutation_rate > 1:
+        print("ERROR: Mutation rate must be a probability between 0 and 1, inclusive")
+        sys.exit(0)
+    if args.epsilon < 0:
+        print("ERROR: Epsilon must be positive")
+        sys.exit(0)
+    tsp = TSPProblem(args.file)
+    tsp.run(n_iters=args.iterations, n_elite=args.num_elite, mut_rate=args.mutation_rate, pop_size=args.generation, epsilon=args.epsilon, report_every=args.report)
 
 
 
